@@ -149,13 +149,21 @@ body {
 #header #optionViews.publishView #publishView { display: block; }
 #header #optionViews.envView #envView { display: block; }
 
-#header #optionViews.txView input,
+#header #optionViews input,
 #header #optionViews.txView select {
     max-width: 13em;
     padding: 0.3em;
     box-sizing: border-box;
     border: 1px solid rgba( 0,0,0,0.3 );
     border-radius: 3px;
+}
+
+#header #optionViews textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    height: 4em;
+    margin: 1em 0;
 }
 
 #header #optionViews .pre {
@@ -178,16 +186,19 @@ body {
     padding-left: 6em;
 }
 
-#header #gist {
+#header button {
     background-color: #efefef;
     font-size: 12px;
-    padding: 0.25em;
+    padding: 0.5em 1em;
     color: black;
     border:0 none;
     border-radius: 3px;
-    width: 8em;
     margin-right: 1em;
     cursor: pointer;
+}
+
+#header button i {
+    margin-right: 0.5em;
 }
 
 
@@ -242,6 +253,11 @@ body {
 #output .poweredBy,
 #output .legend { display: none; }
 
+#output:empty {
+    height: 10em;
+    background: url("../img/loader.gif") center center no-repeat transparent;
+}
+
 #output .udapp {
     border: 0 none;
     box-shadow: none;
@@ -253,7 +269,7 @@ body {
     overflow: auto;
     display: block;
     clear: both;
-    margin: 0.5em;
+    margin: 1em 0em;
 }
 
 .gethDeployText {

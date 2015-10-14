@@ -88,7 +88,7 @@
 .udapp .output .result {
 	position: relative;
 	margin-bottom: 0.5em;
-	white-space: pre;
+	white-space: pre-line;
 }
 
 .udapp .result { position: relative; }

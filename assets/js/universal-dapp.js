@@ -5,20 +5,17 @@ function UniversalDApp (contracts, options) {
     this.renderOutputModifier = options.renderOutputModifier || function(name, content) { return content; };
 
     if (!options.vm && web3.currentProvider) {
-
+        // Use injected provider.
     } else if (options.vm) {
         this.vm = new EthVm();
         //@todo this does not calculate the gas costs correctly but gets the job done.
         this.identityCode = 'return { gasUsed: 1, return: opts.data, exception: 1 };';
         this.identityAddr = ethUtil.pad(new Buffer('04', 'hex'), 20)
         this.vm.loadCompiled(this.identityAddr, this.identityCode);
-        this.secretKey = '3cd7232cd6f3fc66a57a6bedc1a8ed6c228fff0a327e169c2bcc5e869ed49511'
-        this.publicKey = '0406cc661590d48ee972944b35ad13ff03c7876eae3fd191e8a2f77311b0a3c6613407b5005e63d7d8d76b89d5f900cde691497688bb281e07a5052ff61edebdc0'
-        this.address = ethUtil.pubToAddress(new Buffer(this.publicKey, 'hex'));
         this.account = new Account();
         this.account.balance = 'f00000000000000001';
-        this.nonce = 0;
-        this.vm.stateManager.trie.put(this.address, this.account.serialize());   
+        this.nonces = {};
+        this.vm.stateManager.trie.put(this.options.getAddress(), this.account.serialize());   
     } else {
         var host = options.host || "localhost";
         var port = options.port || "8545";
@@ -292,6 +289,7 @@ UniversalDApp.prototype.getCallButton = function(args) {
         self.runTx(data, args, function(err, result) {
             if (err) {
                 replaceOutput($result, $('<span/>').text(err).addClass('error'));
+                console.error(err);
             } else if (self.options.vm && result.vm.return === undefined) {
                 replaceOutput($result, $('<span/>').text('Exception during execution.').addClass('error'));
             } else if (self.options.vm && isConstructor) {
@@ -410,8 +408,16 @@ UniversalDApp.prototype.runTx = function( data, args, cb) {
     var constant = args.abi.constant;
     var isConstructor = args.bytecode !== undefined;
 
-    var gas = self.options.getGas ? self.options.getGas : 1000000;
-    var value = self.options.getValue ? self.options.getValue : 0;
+    var gas = self.options.getGas ? self.options.getGas() : 1000000;
+    var gasPrice = self.options.gasPrice ? self.options.gasPrice() : 0;
+    var value = self.options.getValue ? self.options.getValue() : 0;
+    var from = self.options.getAddress ? self.options.getAddress() : web3.eth.accounts[0];
+
+
+    if (!from) {
+        cb(new Error("No account to send from, please create a new account."), null);
+        return;
+    }
     
     if (!this.vm) {
         if (constant && !isConstructor) {
@@ -419,10 +425,11 @@ UniversalDApp.prototype.runTx = function( data, args, cb) {
             func[args.abi.name].call( cb );
         } else {
             var tx = {
-                from: self.options.getAddress ? self.options.getAddress() : web3.eth.accounts[0],
+                from: from,
                 to: to,
                 data: data,
                 gas: gas,
+                gasPrice: gasPrice,
                 value: value
             };
             web3.eth.estimateGas( tx, function(err, resp){
@@ -434,17 +441,30 @@ UniversalDApp.prototype.runTx = function( data, args, cb) {
             });
         }
     } else {
+        self.nonces[from] = self.nonces[from] ? self.nonces[from] : 0;
+        var nonce = new Buffer([self.nonces[from]++]);
         try {
             var tx = new Tx({
-                nonce: new Buffer([this.nonce++]), //@todo count beyond 255
+                from: from,
+                nonce: nonce, //@todo count beyond 255
                 gasPrice: '01',
                 gasLimit: '3000000000', //plenty
                 to: to,
                 value: value,
                 data: data
             });
-            tx.sign(new Buffer(this.secretKey, 'hex'));
-            this.vm.runTx({tx: tx}, cb);
+
+            if (!constant || isConstructor) {
+                self.options.keystore.passwordProvider(function(err, pwd){
+                    var pk = self.options.keystore.exportPrivateKey( from.substr(0,2) === '0x' ? from.substr(2) : from, pwd);
+                    tx.sign(new Buffer( pk, 'hex'));
+                    self.vm.runTx({tx: tx}, cb);    
+                });
+            } else {
+                this.vm.runTx({tx: tx}, cb);
+            }
+            
+
         } catch (e) {
             cb( e, null );
         }
