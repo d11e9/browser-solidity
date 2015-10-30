@@ -10,9 +10,9 @@ function UniversalDApp (contracts, options) {
         this.vm = new EthVm();
         //@todo this does not calculate the gas costs correctly but gets the job done.
         this.identityCode = 'return { gasUsed: 1, return: opts.data, exception: 1 };';
-        this.identityAddr = ethUtil.pad(new Buffer('04', 'hex'), 20)
+        this.identityAddr = EthVm.deps.ethUtil.pad(new Buffer('04', 'hex'), 20)
         this.vm.loadCompiled(this.identityAddr, this.identityCode);
-        this.account = new Account();
+        this.account = new EthVm.deps.Account();
         this.account.balance = 'f00000000000000001';
         this.nonces = {};
         this.vm.stateManager.trie.put(this.options.getAddress(), this.account.serialize());   
