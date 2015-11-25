@@ -16918,6 +16918,8 @@ const async = require('async')
 const BlockHeader = require('./header')
 const params = require('ethereum-common')
 
+window.Tx = Tx;
+
 /**
  * Represents a block
  * @constructor

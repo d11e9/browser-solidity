@@ -442,13 +442,13 @@ UniversalDApp.prototype.runTx = function( data, args, cb) {
         }
     } else {
         self.nonces[from] = self.nonces[from] ? self.nonces[from] : 0;
-        var nonce = new Buffer([self.nonces[from]++]);
+        var nonce = new Buffer([self.nonces[from]]);
         try {
             var tx = new Tx({
                 from: from,
                 nonce: nonce, //@todo count beyond 255
                 gasPrice: '01',
-                gasLimit: '3000000000', //plenty
+                // gasLimit: '3000000000', //plenty
                 to: to,
                 value: value,
                 data: data
@@ -462,10 +462,14 @@ UniversalDApp.prototype.runTx = function( data, args, cb) {
                 });
             } else {
                 this.vm.runTx({tx: tx}, cb);
+
             }
+            self.nonces[from]++;
             
 
         } catch (e) {
+            self.nonces[from]--;
+            console.log(e);
             cb( e, null );
         }
     }
