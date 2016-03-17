@@ -3,7 +3,6 @@
   "name": "Sol",
   "description": "Solidity realtime ethereum compiler and runtime",
   "devtools_page": "devtools.html",
-  "update_url": "https://chriseth.github.io/browser-solidity/",
   "version": "1.1",
   "manifest_version": 2,
   "background": {
@@ -16,8 +15,8 @@
   },
 
   "icons": {
-    "48": "assets/img/sol.png",
-    "128": "assets/img/sol.png"
+    "48": "assets/img/sol48.png",
+    "128": "assets/img/sol228.png"
   },
   
   "permissions": [
