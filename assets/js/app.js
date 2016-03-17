@@ -1,5 +1,43 @@
 var Base64={_keyStr:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",encode:function(e){var t="";var n,r,i,s,o,u,a;var f=0;e=Base64._utf8_encode(e);while(f<e.length){n=e.charCodeAt(f++);r=e.charCodeAt(f++);i=e.charCodeAt(f++);s=n>>2;o=(n&3)<<4|r>>4;u=(r&15)<<2|i>>6;a=i&63;if(isNaN(r)){u=a=64}else if(isNaN(i)){a=64}t=t+this._keyStr.charAt(s)+this._keyStr.charAt(o)+this._keyStr.charAt(u)+this._keyStr.charAt(a)}return t},decode:function(e){var t="";var n,r,i;var s,o,u,a;var f=0;e=e.replace(/[^A-Za-z0-9\+\/\=]/g,"");while(f<e.length){s=this._keyStr.indexOf(e.charAt(f++));o=this._keyStr.indexOf(e.charAt(f++));u=this._keyStr.indexOf(e.charAt(f++));a=this._keyStr.indexOf(e.charAt(f++));n=s<<2|o>>4;r=(o&15)<<4|u>>2;i=(u&3)<<6|a;t=t+String.fromCharCode(n);if(u!=64){t=t+String.fromCharCode(r)}if(a!=64){t=t+String.fromCharCode(i)}}t=Base64._utf8_decode(t);return t},_utf8_encode:function(e){e=e.replace(/\r\n/g,"\n");var t="";for(var n=0;n<e.length;n++){var r=e.charCodeAt(n);if(r<128){t+=String.fromCharCode(r)}else if(r>127&&r<2048){t+=String.fromCharCode(r>>6|192);t+=String.fromCharCode(r&63|128)}else{t+=String.fromCharCode(r>>12|224);t+=String.fromCharCode(r>>6&63|128);t+=String.fromCharCode(r&63|128)}}return t},_utf8_decode:function(e){var t="";var n=0;var r=c1=c2=0;while(n<e.length){r=e.charCodeAt(n);if(r<128){t+=String.fromCharCode(r);n++}else if(r>191&&r<224){c2=e.charCodeAt(n+1);t+=String.fromCharCode((r&31)<<6|c2&63);n+=2}else{c2=e.charCodeAt(n+1);c3=e.charCodeAt(n+2);t+=String.fromCharCode((r&15)<<12|(c2&63)<<6|c3&63);n+=3}}return t}};
 
+
+// ------------------ storage wrapper -------------------
+// use local storage unlesss in an extension , then use cheom.storage.sync 
+// (which will sync data between browsers)
+var Store = function(){
+	this.extension = chrome && chrome.storage;
+}
+
+Store.prototype.clear = function() {
+	if (this.extension) return chrome.storage.sync.clear();
+	return window.localStorage.clear()
+}
+
+Store.prototype.getItem = function(key) {
+	if (this.extension) {
+		return chrome.storage.sync.get(key);
+	}
+	return window.localStorage.getItem(key);
+}
+
+Store.prototype.setItem = function(key, value) {
+	if (this.extension){
+		var obj = {}
+		obj[key] = value;
+		return chrome.storage.sync.set(obj);
+	}
+	return window.localStorage.setItem(key, value);
+}
+
+Store.prototype.removeItem = function(key) {
+	if (this.extension) return chrome.storage.sync.remove(key);
+	return window.localStorage.removeItem(key);
+}
+
+
+var store = new Store();
+
+
 $(document).ready(function() {
 
 // ------------------ gist load ----------------
@@ -35,13 +73,13 @@ if (location_query_params.indexOf('gist') !== -1 && location_query_params.length
 				for (var f in response.data.files) {
 					var key = fileKey(f);
 					var content = response.data.files[f].content;
-					if (key in window.localStorage && window.localStorage[key] != content) {
+					if (key in store && store.getItem(key) != content) {
 						var count = '';
 						var otherKey = key + count;
-						while ((key + count) in window.localStorage) count = count - 1;
-						window.localStorage[key + count] = window.localStorage[key];
+						while ((key + count) in store) count = count - 1;
+						store.setItem(key + count, store.getItem(key) );
 					}
-					window.localStorage[key] = content;
+					store.setItem(key) = content;
 				}
 				SOL_CACHE_FILE = fileKey(Object.keys(response.data.files)[0]);
 				updateFiles();
@@ -64,19 +102,19 @@ var Range = ace.require('ace/range').Range;
 var errMarkerId = null;
 
 var untitledCount = '';
-if (!getFiles().length || window.localStorage['sol-cache']) {
+if (!getFiles().length || store.getItem('sol-cache')) {
 	if(loadingFromGist) return;
 	// Backwards-compatibility     
-	while (window.localStorage[SOL_CACHE_UNTITLED + untitledCount])
+	while (store.getItem(SOL_CACHE_UNTITLED + untitledCount))
 		untitledCount = (untitledCount - 0) + 1;
 	SOL_CACHE_FILE = SOL_CACHE_UNTITLED + untitledCount;
-	window.localStorage[SOL_CACHE_FILE] = window.localStorage['sol-cache'] || BALLOT_EXAMPLE;
-	window.localStorage.removeItem('sol-cache');
+	store.setItem(SOL_CACHE_FILE, store.getItem('sol-cache') || BALLOT_EXAMPLE);
+	store.removeItem('sol-cache');
 }
 
 SOL_CACHE_FILE = getFiles()[0];
 
-editor.setValue( window.localStorage[SOL_CACHE_FILE], -1);
+editor.setValue( store.getItem(SOL_CACHE_FILE), -1);
 editor.resize(true);
 session.setMode("ace/mode/javascript");
 session.setTabSize(4);
@@ -148,7 +186,7 @@ $('#gist').click(function(){
 		
 		for(var f in filesArr) {
 			files[fileNameFromKey(filesArr[f])] = {
-				content: localStorage[filesArr[f]]
+				content: localStorage.getItem(filesArr[f])
 			};
 		}
 
@@ -172,10 +210,10 @@ $('#gist').click(function(){
 // ----------------- file selector-------------
 var $filesEl = $('#files');
 $filesEl.on('click','.newFile', function() {
-	while (window.localStorage[SOL_CACHE_UNTITLED + untitledCount])
+	while (store.getItem(SOL_CACHE_UNTITLED + untitledCount))
 		untitledCount = (untitledCount - 0) + 1;
 	SOL_CACHE_FILE = SOL_CACHE_UNTITLED + untitledCount;
-	window.localStorage[SOL_CACHE_FILE] = '';
+	store.setItem(SOL_CACHE_FILE, '');
 	updateFiles();
 });
 
@@ -201,9 +239,9 @@ $filesEl.on('click', '.file.active', function(ev) {
 		$fileNameInputEl.off('keyup');
 
 		if (newName !== originalName && confirm("Are you sure you want to rename: " + originalName + " to " + newName + '?')) {
-			var content = window.localStorage.getItem( fileKey(originalName) );
-			window.localStorage[fileKey( newName )] = content;
-			window.localStorage.removeItem( fileKey( originalName) );
+			var content = store.getItem( fileKey(originalName) );
+			store.setItem(fileKey( newName ), content);
+			store.removeItem( fileKey( originalName) );
 			SOL_CACHE_FILE = fileKey( newName );
 		}
 
@@ -220,7 +258,7 @@ $filesEl.on('click', '.file .remove', function(ev) {
 	var index = getFiles().indexOf( fileKey(name) );
 
 	if (confirm("Are you sure you want to remove: " + name + " from local storage?")) {
-		window.localStorage.removeItem( fileKey( name ) );
+		store.removeItem( fileKey( name ) );
 		SOL_CACHE_FILE = getFiles()[ Math.max(0, index - 1)];
 		updateFiles();
 	}
@@ -253,7 +291,7 @@ function updateFiles() {
 	if (SOL_CACHE_FILE) {
 		var active = fileTabFromKey(SOL_CACHE_FILE);
 		active.addClass('active');
-		editor.setValue( window.localStorage[SOL_CACHE_FILE] || '', -1);
+		editor.setValue( store.getItem(SOL_CACHE_FILE) || '', -1);
 		editor.focus();
 	}
 	$('#input').toggle( !!SOL_CACHE_FILE );
@@ -328,7 +366,7 @@ function setEditorSize (delta) {
 }
 
 function getEditorSize(){
-	window.localStorage[EDITOR_SIZE_CACHE_KEY] = $('#righthand-panel').width();
+	store.setItem(EDITOR_SIZE_CACHE_KEY, $('#righthand-panel').width() );
 }
 
 $(document).mouseup(function(e){
@@ -338,12 +376,12 @@ $(document).mouseup(function(e){
 		$(document).unbind('mousemove');
 		dragging = false;
 		setEditorSize(delta);
-		window.localStorage.setItem(EDITOR_SIZE_CACHE_KEY, delta);
+		store.setItem(EDITOR_SIZE_CACHE_KEY, delta);
 	}
 });
 
 // set cached defaults
-var cachedSize = window.localStorage.getItem(EDITOR_SIZE_CACHE_KEY);
+var cachedSize = store.getItem(EDITOR_SIZE_CACHE_KEY);
 if (cachedSize) setEditorSize(cachedSize);
 else getEditorSize();
 
@@ -353,7 +391,7 @@ else getEditorSize();
 var hidingRHP = false;
 $('.toggleRHP').click(function(){
    hidingRHP = !hidingRHP;
-   setEditorSize( hidingRHP ? 0 : window.localStorage[EDITOR_SIZE_CACHE_KEY] );
+   setEditorSize( hidingRHP ? 0 : store.getItem(EDITOR_SIZE_CACHE_KEY) );
    $('.toggleRHP').toggleClass('hiding', hidingRHP);
    if (!hidingRHP) compile();
 });
@@ -392,7 +430,7 @@ var compile = function(missingInputs) {
 	editor.getSession().removeMarker(errMarkerId);
 	$('#output').empty();
 	var input = editor.getValue();
-	window.localStorage.setItem(SOL_CACHE_FILE, input);
+	store.setItem(SOL_CACHE_FILE, input);
 
 	var files = {};
 	files[fileNameFromKey(SOL_CACHE_FILE)] = input;
@@ -431,7 +469,7 @@ var compileTimeout = null;
 var onChange = function() {
 	var input = editor.getValue();
 	if (input === "") {
-		window.localStorage.setItem(SOL_CACHE_FILE, '');
+		store.setItem(SOL_CACHE_FILE, '');
 		return;
 	}
 	if (input === previousInput)
@@ -497,7 +535,7 @@ function gatherImports(files, importHints, cb) {
 			var m = importHints.pop();
 			if (m in files) continue;
 			if (getFiles().indexOf(fileKey(m)) !== -1) {
-				files[m] = window.localStorage[fileKey(m)];
+				files[m] = store.getItem(fileKey(m));
 				reloop = true;
 			} else if (m in cachedRemoteFiles) {
 				files[m] = cachedRemoteFiles[m];
