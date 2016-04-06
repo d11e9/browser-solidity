@@ -123,7 +123,6 @@
 
 			var files = getFiles();
 			for (var x in files) {
-				console.log(files[x])
 				sessions[files[x]] = newEditorSession(files[x])
 			}
 
@@ -381,7 +380,6 @@
 			function activeFilePos() {
 				var el = $filesEl.find('.active');
 				var l = el.position().left;
-				console.log("active file left", l, el)
 				return l;
 			}
 
