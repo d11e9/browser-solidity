@@ -102,7 +102,8 @@
 			var SOL_CACHE_UNTITLED = SOL_CACHE_FILE_PREFIX + 'Untitled';
 			var SOL_CACHE_FILE = null;
 
-			var editor = ace.edit("input");
+			window.aces = {}
+			var editor = window.editor =  ace.edit("input");
 			var sessions = {};
 			var Range = ace.require('ace/range').Range;
 			var errMarkerId = null;
@@ -121,19 +122,21 @@
 			SOL_CACHE_FILE = getFiles()[0];
 
 			var files = getFiles();
-			for (var x in files)
+			for (var x in files) {
+				console.log(files[x])
 				sessions[files[x]] = newEditorSession(files[x])
+			}
 
 			editor.setSession( sessions[SOL_CACHE_FILE] );
 			editor.resize(true);
 
 
 
-			function newEditorSession(filename) {
-				var s = new ace.EditSession(window.localStorage[filename])
-				s.setMode("ace/mode/javascript");
+			function newEditorSession(filekey) {
+				var s = new ace.EditSession(window.localStorage[filekey], "ace/mode/javascript")
 				s.setTabSize(4);
 				s.setUseSoftTabs(true);
+				window.aces[filekey] = s;
 				return s;
 			}
 
@@ -143,7 +146,9 @@
 
 			$('#options li').click(function(ev){
 				var $el = $(this);
-				var cls = /[a-z]+View/.exec( $el.get(0).className )[0];
+				var match = /[a-z]+View/.exec( $el.get(0).className );
+				if (!match) return;
+				var cls = match[0];
 				if (!$el.hasClass('active')) {
 					$el.parent().find('li').removeClass('active');
 					$('#optionViews').attr('class', '').addClass(cls);
@@ -196,7 +201,7 @@
 
 			$('#gist').click(function(){
 				if (confirm("Are you sure you want to publish all your files anonymously as a public gist on github.com?")) {
-												   
+
 					var files = {};
 					var filesArr = getFiles();
 					var description = "Created using soleditor: Realtime Ethereum Contract Compiler and Runtime. Load this file by pasting this gists URL or ID at https://chriseth.github.io/browser-solidity/?gist=";
@@ -225,6 +230,7 @@
 
 
 			// ----------------- file selector-------------
+
 			var $filesEl = $('#files');
 			$filesEl.on('click','.newFile', function() {
 				while (window.localStorage[SOL_CACHE_UNTITLED + untitledCount])
@@ -313,11 +319,12 @@
 				}
 				$('#input').toggle( !!SOL_CACHE_FILE );
 				$('#output').toggle( !!SOL_CACHE_FILE );
+				reAdjust();
 			}
 
 			function fileTabTemplate(key) {
 				var name = fileNameFromKey(key);
-				return $('<span class="file"><span class="name">'+name+'</span><span class="remove"><i class="fa fa-close"></i></span></span>');
+				return $('<li class="file"><span class="name">'+name+'</span><span class="remove"><i class="fa fa-close"></i></span></li>');
 			}
 
 			function fileKey( name ) {
@@ -340,6 +347,68 @@
 			}
 
 			updateFiles();
+
+
+			var hidWidth;
+
+			function widthOfList (){
+				var itemsWidth = 0;
+				$('.file').each(function(){
+					var itemWidth = $(this).outerWidth();
+					itemsWidth += itemWidth;
+				});
+				return itemsWidth;
+			};
+
+			function widthOfHidden(){
+				return (($('.files-wrapper').outerWidth()) - widthOfList() - getLeftPosi());
+			};
+
+			function widthOfVisible(){
+				return $('.files-wrapper').outerWidth();
+			};
+
+			function getLeftPosi(){
+				return $('#files').position().left;
+			};
+
+			function reAdjust (){
+
+				console.log("left start: ", getLeftPosi())
+				console.log("outer width: ", widthOfVisible(), "content width: ",  widthOfList(), " left+vis: ", getLeftPosi() + widthOfVisible())
+				if (widthOfList() + getLeftPosi() > + widthOfVisible()) {
+					console.log( "show right scroll")
+					$('.scroller-right').fadeIn('fast');
+				} else {
+					console.log( "hide right scroll")
+					$('.scroller-right').fadeOut('fast');
+				}
+
+				if (getLeftPosi()<0) {
+					console.log( "show left scroll")
+					$('.scroller-left').fadeIn('fast');
+				} else {
+					console.log( "hide left scroll")
+					$('.scroller-left').fadeOut('fast');
+					$('#files').animate({left: getLeftPosi() + "px"},'slow');
+				}
+			}
+
+			$('.scroller-right').click(function() {
+				var delta = (getLeftPosi() - 200)
+				console.log(delta)
+				$('#files').animate({left: delta + "px"},'slow',function(){
+					reAdjust();
+				});
+			});
+
+			$('.scroller-left').click(function() {
+				var delta = Math.min( (getLeftPosi() + 200), 0 )
+				console.log(delta)
+				$('#files').animate({left: delta + "px"},'slow',function(){
+					reAdjust();
+				});
+			});
 
 			// ----------------- version selector-------------
 
@@ -395,6 +464,7 @@
 					dragging = false;
 					setEditorSize(delta);
 					window.localStorage.setItem(EDITOR_SIZE_CACHE_KEY, delta);
+					reAdjust();
 				}
 			});
 
@@ -408,10 +478,11 @@
 
 			var hidingRHP = false;
 			$('.toggleRHP').click(function(){
-			   hidingRHP = !hidingRHP;
-			   setEditorSize( hidingRHP ? 0 : window.localStorage[EDITOR_SIZE_CACHE_KEY] );
-			   $('.toggleRHP').toggleClass('hiding', hidingRHP);
-			   if (!hidingRHP) compile();
+				 hidingRHP = !hidingRHP;
+				 setEditorSize( hidingRHP ? 0 : window.localStorage[EDITOR_SIZE_CACHE_KEY] );
+				 $('.toggleRHP i').toggleClass('fa-angle-double-right', !hidingRHP);
+				 $('.toggleRHP i').toggleClass('fa-angle-double-left', hidingRHP);
+				 if (!hidingRHP) compile();
 			});
 			
 
@@ -429,6 +500,7 @@
 						session.setWrapLimit(parseInt(contentWidth / characterWidth, 10));
 					}
 				}
+				reAdjust();
 			}
 			window.onresize = onResize;
 			onResize();
@@ -766,7 +838,7 @@
 				$('.col2 input,textarea').click(function() { this.select(); });
 			};
 			var tableRowItems = function(first, second, cls) {
-				return $('<div class="row"/>')
+				return $('<div class="crow"/>')
 					.addClass(cls)
 					.append($('<div class="col1">').append(first))
 					.append($('<div class="col2">').append(second));
