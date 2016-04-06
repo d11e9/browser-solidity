@@ -232,12 +232,18 @@
 			// ----------------- file selector-------------
 
 			var $filesEl = $('#files');
+			var FILE_SCROLL_DELTA = 300;
+
 			$('.newFile').on('click', function() {
 				while (window.localStorage[SOL_CACHE_UNTITLED + untitledCount])
 					untitledCount = (untitledCount - 0) + 1;
 				SOL_CACHE_FILE = SOL_CACHE_UNTITLED + untitledCount;
 				window.localStorage[SOL_CACHE_FILE] = '';
 				updateFiles();
+
+				$filesEl.animate({left: (0 - activeFilePos() + (FILE_SCROLL_DELTA/2)) + "px"}, "slow", function(){
+					reAdjust();
+				})
 			});
 
 			$filesEl.on('click', '.file:not(.active)', showFileHandler);
@@ -372,6 +378,13 @@
 				return $filesEl.position().left;
 			};
 
+			function activeFilePos() {
+				var el = $filesEl.find('.active');
+				var l = el.position().left;
+				console.log("active file left", l, el)
+				return l;
+			}
+
 			function reAdjust (){
 				if (widthOfList() + getLeftPosi() > + widthOfVisible()) {
 					$scrollerRight.fadeIn('fast');
@@ -388,14 +401,14 @@
 			}
 
 			$scrollerRight.click(function() {
-				var delta = (getLeftPosi() - 200)
+				var delta = (getLeftPosi() - FILE_SCROLL_DELTA)
 				$filesEl.animate({left: delta + "px"},'slow',function(){
 					reAdjust();
 				});
 			});
 
 			$scrollerLeft.click(function() {
-				var delta = Math.min( (getLeftPosi() + 200), 0 )
+				var delta = Math.min( (getLeftPosi() + FILE_SCROLL_DELTA), 0 )
 				$filesEl.animate({left: delta + "px"},'slow',function(){
 					reAdjust();
 				});
