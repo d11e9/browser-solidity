@@ -217,7 +217,7 @@ body {
 
 #header #optionViews .pre {
     word-wrap: break-word;
-    background-color: #efefef;
+    background-color: #C6CFF7;
     font-family: monospace;
     border-radius: 3px;
     display: inline-block;
@@ -236,7 +236,7 @@ body {
 }
 
 #header #gist {
-    background-color: #efefef;
+    background-color: #C6CFF7;
     font-size: 12px;
     padding: 0.25em;
     color: black;
