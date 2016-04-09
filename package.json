@@ -4,7 +4,8 @@
   "description": "Solidity compiler",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "bundle": "browserify -s 'solc' -e . -o ./dist/solc-bundle.js"
   },
   "repository": {
     "type": "git",
@@ -20,5 +21,11 @@
   "bugs": {
     "url": "https://github.com/chriseth/browser-solidity/issues"
   },
-  "homepage": "https://github.com/chriseth/browser-solidity#readme"
+  "homepage": "https://github.com/chriseth/browser-solidity#readme",
+  "devDependencies": {
+    "browserify": "^13.0.0",
+    "bufferutil": "^1.2.1",
+    "utf-8-validate": "^1.2.1",
+    "ws": "^1.0.1"
+  }
 }
